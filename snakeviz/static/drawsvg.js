@@ -198,6 +198,30 @@ var sv_update_info_div = function sv_update_info_div (d) {
 };
 
 
+var get_func_name = function get_func_name (d) {
+  var re = /^(.*):(\d+)\((.*)\)$/;
+  var result = re.exec(d.name);
+  var file = result[1];
+  var directory = '';
+  var slash = file.lastIndexOf('/');
+  if (slash !== -1) {
+    directory = file.slice(0, slash + 1);
+    file = file.slice(slash + 1);
+  }
+  var info = {
+    'file': file,
+    'directory': directory,
+    'line': result[2],
+    'name': result[3],
+    'cumulative': d.cumulative.toPrecision(5),
+    'cumulative_percent': (d.cumulative / sv_total_time * 100).toFixed(2)
+  };
+
+  return info.name + " : " + info.cumulative_percent + "% | " + info.cumulative + "s"
+};
+
+
+
 var apply_mouseover = function apply_mouseover (selection) {
   selection.on('mouseover', function (d, i) {
     // select all the nodes that represent this exact function
@@ -260,7 +284,10 @@ var drawIcicle = function drawIcicle(json) {
       .range([0, params["height"] - params["topMargin"]]);
   var rect = vis.data([json]).selectAll("rect")
       .data(nodes)
-      .enter().append("rect")
+      .enter().append("g")
+      .attr("id", function(d, i) { return "path-" + i; })
+
+  rect.append("rect")
       .attr("id", function(d, i) { return "path-" + i; })
       .attr("x", function(d) { return x(d.x); })
       .attr("y", function(d) { return y(d.y); })
@@ -271,7 +298,22 @@ var drawIcicle = function drawIcicle(json) {
       .attr("stroke", "#FFF")
       .on('click', click)
       .call(apply_mouseover);
+
+  var svgBox = rect.append("svg")      
+      .attr("x", function(d) { return x(d.x); })
+      .attr("y", function(d) { return y(d.y); })
+      .attr("width", function(d) { return x(d.dx); })
+      .attr("height", function(d) { return y(d.dy); })
+
+    svgBox.append("text")      
+      .attr("x", 10)
+      .attr("y", 20)
+      .text(function(d) { return get_func_name(d); })
 };
+
+
+
+
 
 // Clear and redraw the visualization
 var redraw_vis = function redraw_vis(json) {
